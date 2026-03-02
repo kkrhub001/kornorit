@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot KKR Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Kanit', sans-serif; transition: all 0.3s ease; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); }
+        
+        /* Table Themes */
+        .table-theme-classic thead { background: #1e293b; color: white; }
+        .table-theme-modern thead { background: linear-gradient(90deg, #2563eb, #7c3aed); color: white; }
+        .table-theme-dark thead { background: #000000; color: #fbbf24; }
+        .table-theme-gold thead { background: #854d0e; color: #fef3c7; }
+        
+        .theme-dark { background-color: #0f172a; color: #e2e8f0; }
+        .theme-dark .glass { background: rgba(30, 41, 59, 0.8); border-color: #334155; }
+        
+        .no-export { display: none !important; }
+        
+        .card-item { transition: transform 0.2s; }
+        .card-item:hover { transform: translateY(-2px); }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- Login Overlay -->
+    <div id="login-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+            <h2 class="text-2xl font-bold mb-2">ระบบลงคะแนน Robot</h2>
+            <p class="text-gray-500 mb-6 italic">ใส่รหัส</p>
+            <input type="password" id="access-key" class="w-full p-3 border rounded-xl mb-4 text-center">
+            <button onclick="checkKey()" class="w-full bg-blue-600 text-white py-3 rounded-xl font-bold">ยืนยัน</button>
+        </div>
+    </div>
+
+    <div id="main-content" class="hidden">
+        <nav class="bg-white border-b sticky top-0 z-40 px-6 py-4 flex flex-wrap justify-between items-center gap-4 shadow-sm">
+<div class="flex items-center gap-2">
+    <img src="IMG_1635.jpg" alt="Logo" class="w-10 h-10 object-contain rounded-lg">
+    <h1 class="text-xl font-bold">GulCode</h1>
+</div>
+            <div class="flex items-center gap-2 bg-gray-100 p-1 rounded-xl">
+                <button onclick="showSection('builder')" class="nav-btn px-4 py-2 rounded-lg transition font-medium" data-section="builder">สร้างฟอร์ม</button>
+                <button onclick="showSection('scoring')" class="nav-btn px-4 py-2 rounded-lg transition font-medium text-gray-600" data-section="scoring">ลงคะแนน</button>
+                <button onclick="showSection('board')" class="nav-btn px-4 py-2 rounded-lg transition font-medium text-gray-600" data-section="board">ตารางคะแนน</button>
+            </div>
+            <select id="theme-selector" onchange="applyMainTheme()" class="border rounded-lg p-2 text-sm">
+                <option value="light">☀️ Light</option>
+                <option value="dark">🌙 Dark</option>
+            </select>
+        </nav>
+
+        <main class="container mx-auto max-w-5xl mt-8 px-4 pb-20">
+            
+            <!-- Builder -->
+            <section id="section-builder" class="section-content">
+                <div class="glass p-8 rounded-2xl border shadow-xl">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold">สร้าง Template</h2>
+                        <input type="text" id="template-name" placeholder="ชื่อรายการแข่งขัน..." class="p-2 border rounded-lg w-64">
+                    </div>
+
+                    <div id="builder-items" class="space-y-3 mb-8"></div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 border-t pt-6">
+                        <button onclick="addBuilderItem('team_name')" class="p-3 bg-indigo-50 border rounded-xl text-xs font-bold">🏷️ ชื่อทีม</button>
+                        <button onclick="addBuilderItem('checkbox')" class="p-3 bg-green-50 border rounded-xl text-xs font-bold">✅ Checkpoint</button>
+                        <button onclick="addBuilderItem('bonus')" class="p-3 bg-yellow-50 border rounded-xl text-xs font-bold">⭐ Textbox คะแนน</button>
+                        <button onclick="addBuilderItem('time')" class="p-3 bg-orange-50 border rounded-xl text-xs font-bold">⏱️ ตัวใส่เวลา</button>
+                        <button onclick="addBuilderItem('retry')" class="p-3 bg-red-50 border rounded-xl text-xs font-bold">🔄 รีไทร์</button>
+                    </div>
+
+                    <div class="mt-10 flex justify-end">
+                        <button onclick="saveTemplate()" class="bg-blue-600 text-white px-10 py-3 rounded-xl font-bold">บันทึกเท็มเพลต</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Scoring -->
+            <section id="section-scoring" class="section-content hidden">
+                <div class="max-w-2xl mx-auto glass p-8 rounded-2xl border shadow-xl">
+                    <h2 class="text-2xl font-bold mb-6">ลงคะแนน</h2>
+                    
+                    <div class="flex gap-2 mb-6">
+                        <select id="active-template-select" onchange="loadTemplateToScore()" class="flex-grow p-4 border rounded-xl text-black"></select>
+                        <button id="delete-template-btn" onclick="deleteActiveTemplate()" class="hidden bg-red-50 text-red-600 border border-red-200 px-4 rounded-xl hover:bg-red-100 transition" title="ลบเท็มเพลตนี้">
+                            🗑️
+                        </button>
+                    </div>
+
+                    <div id="score-form-container" class="space-y-6"></div>
+                    <div id="submit-btn-container" class="mt-10 hidden">
+                        <button onclick="submitScore()" class="w-full bg-indigo-600 text-white py-4 rounded-xl font-bold">บันทึกผลการแข่งขัน</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Leaderboard -->
+            <section id="section-board" class="section-content hidden">
+                <div class="glass p-8 rounded-2xl border shadow-xl">
+                    <div class="flex flex-wrap gap-4 mb-6 items-end">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="text-xs font-bold uppercase opacity-50">ชื่อหัวข้อตาราง</label>
+                            <input type="text" id="board-title-input" value="สรุปผลคะแนน" class="w-full p-2 border rounded-lg font-bold" oninput="updateBoardDisplay()">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold uppercase opacity-50">โลโก้ (URL)</label>
+                            <input type="text" id="board-logo-url" placeholder="https://..." class="p-2 border rounded-lg text-sm" oninput="updateBoardDisplay()">
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold uppercase opacity-50">ธีมตาราง</label>
+                            <select id="board-theme-select" class="p-2 border rounded-lg text-sm" onchange="updateBoardDisplay()">
+                                <option value="classic">Classic Gray</option>
+                                <option value="modern">Modern Blue</option>
+                                <option value="dark">Professional Dark</option>
+                                <option value="gold">Champion Gold</option>
+                            </select>
+                        </div>
+                        <button onclick="downloadBoard()" class="bg-emerald-600 text-white px-6 py-2.5 rounded-xl font-bold">บันทึกภาพ</button>
+                    </div>
+
+                    <div id="export-area" class="bg-white p-10 rounded-2xl border border-gray-100">
+                        <div id="board-header" class="text-center mb-8">
+                            <img id="display-logo" src="" class="h-20 mx-auto mb-4 hidden object-contain">
+                            <h3 id="display-board-title" class="text-4xl font-black text-slate-800"></h3>
+                            <div class="h-1 w-24 bg-blue-600 mx-auto mt-4 rounded-full"></div>
+                        </div>
+                        
+                        <div class="overflow-x-auto rounded-xl">
+                            <table id="main-table" class="w-full text-left table-theme-classic">
+                                <thead class="uppercase text-xs font-bold tracking-wider">
+                                    <tr id="table-head">
+                                        <th class="p-4 text-center">ลำดับ</th>
+                                        <th class="p-4">ชื่อทีม</th>
+                                        <th class="p-4 text-center">คะแนนรวม</th>
+                                        <th class="p-4 text-center">เวลา</th>
+                                        <th class="p-4 text-center">รีไทร์</th>
+                                        <th class="p-4 text-center btn-column">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-body" class="text-slate-700 bg-white"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, doc, deleteDoc, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDrlavpCKTAjuE6U2NwZsaZ_ARAcbSRmpo",
+            authDomain: "kkrhub-1f664.firebaseapp.com",
+            projectId: "kkrhub-1f664",
+            storageBucket: "kkrhub-1f664.firebasestorage.app",
+            messagingSenderId: "1018687522104",
+            appId: "1:1018687522104:web:8e08977395f29044616dcd"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        const appId = 'kkr-robot-master';
+
+        let currentUser = null;
+        let builderData = [];
+        let templates = {};
+        let scores = [];
+
+        async function initAuth() {
+            await signInAnonymously(auth);
+        }
+
+        onAuthStateChanged(auth, (user) => {
+            currentUser = user;
+            if (user) {
+                listenToTemplates();
+                listenToScores();
+            }
+        });
+
+        initAuth();
+
+        window.checkKey = () => {
+            if (document.getElementById('access-key').value === 'KKR') {
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('main-content').classList.remove('hidden');
+                showSection('builder');
+            }
+        };
+
+        window.showSection = (name) => {
+            document.querySelectorAll('.section-content').forEach(s => s.classList.add('hidden'));
+            document.getElementById(`section-${name}`).classList.remove('hidden');
+            if (name === 'board') updateBoardDisplay();
+        };
+
+        // --- Builder ---
+        window.addBuilderItem = (type) => {
+            const defaults = {
+                team_name: { label: 'ชื่อทีม', isSystem: true },
+                checkbox: { label: 'Checkpoint', passScore: 10, failScore: 0 },
+                bonus: { label: 'โบนัสพิเศษ', type: 'bonus' },
+                time: { label: 'เวลาที่ใช้', isTime: true, unit: 's' },
+                retry: { label: 'จำนวนรีไทร์', isRetry: true }
+            };
+            builderData.push({ id: Date.now(), type, ...defaults[type] });
+            renderBuilder();
+        };
+
+        function renderBuilder() {
+            const container = document.getElementById('builder-items');
+            container.innerHTML = builderData.map((item, index) => `
+                <div class="card-item flex flex-wrap items-center gap-4 p-4 bg-white border rounded-xl shadow-sm">
+                    <span class="px-2 py-1 rounded bg-slate-100 text-[10px] font-black uppercase">${item.type}</span>
+                    <input type="text" value="${item.label}" onchange="updateItem(${index}, 'label', this.value)" class="flex-grow border-b font-medium" ${item.isSystem ? 'readonly' : ''}>
+                    
+                    ${item.type === 'checkbox' ? `
+                        <div class="flex gap-2 text-xs">
+                            ผ่าน: <input type="number" value="${item.passScore}" onchange="updateItem(${index}, 'passScore', this.value)" class="w-12 border rounded">
+                            ไม่ผ่าน: <input type="number" value="${item.failScore}" onchange="updateItem(${index}, 'failScore', this.value)" class="w-12 border rounded">
+                        </div>
+                    ` : ''}
+
+                    ${item.type === 'time' ? `
+                        <select onchange="updateItem(${index}, 'unit', this.value)" class="text-xs border rounded p-1">
+                            <option value="s" ${item.unit === 's' ? 'selected' : ''}>วินาที (s)</option>
+                            <option value="m" ${item.unit === 'm' ? 'selected' : ''}>นาที (m)</option>
+                        </select>
+                    ` : ''}
+                    
+                    ${!item.isSystem ? `<button onclick="removeItem(${index})" class="text-red-400">❌</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        window.updateItem = (idx, key, val) => {
+            builderData[idx][key] = (key === 'passScore' || key === 'failScore') ? Number(val) : val;
+        };
+
+        window.removeItem = (idx) => { builderData.splice(idx, 1); renderBuilder(); };
+
+        window.saveTemplate = async () => {
+            const name = document.getElementById('template-name').value;
+            if (!name) return alert('ใส่ชื่อรายการด้วย');
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'templates'), {
+                name, fields: builderData, timestamp: Date.now()
+            });
+            alert('บันทึกสำเร็จ');
+            document.getElementById('template-name').value = '';
+            builderData = [];
+            addBuilderItem('team_name');
+        };
+
+        // --- Scoring ---
+        function listenToTemplates() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'templates'), (snap) => {
+                const select = document.getElementById('active-template-select');
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">-- เลือกรายการแข่งขัน --</option>';
+                templates = {};
+                snap.forEach(doc => {
+                    templates[doc.id] = doc.data();
+                    const opt = document.createElement('option');
+                    opt.value = doc.id; opt.textContent = doc.data().name;
+                    select.appendChild(opt);
+                });
+                if (templates[currentValue]) select.value = currentValue;
+                else loadTemplateToScore();
+            });
+        }
+
+        window.loadTemplateToScore = () => {
+            const tid = document.getElementById('active-template-select').value;
+            const container = document.getElementById('score-form-container');
+            const btn = document.getElementById('submit-btn-container');
+            const delBtn = document.getElementById('delete-template-btn');
+
+            if (!tid) { 
+                container.innerHTML = ''; 
+                btn.classList.add('hidden'); 
+                delBtn.classList.add('hidden');
+                updateBoardDisplay();
+                return; 
+            }
+            
+            delBtn.classList.remove('hidden');
+            const fields = templates[tid].fields;
+            btn.classList.remove('hidden');
+            container.innerHTML = fields.map((f, i) => {
+                if (f.type === 'team_name') return `<div class="bg-blue-50 p-4 rounded-xl">
+                    <label class="block font-bold mb-2">${f.label}</label>
+                    <input type="text" id="field_${i}" class="w-full p-2 border rounded">
+                </div>`;
+                if (f.type === 'checkbox') return `<div class="bg-white p-4 border rounded-xl flex justify-between items-center">
+                    <span>${f.label} (${f.passScore} แต้ม)</span>
+                    <div class="flex gap-2">
+                        <input type="radio" name="field_${i}" value="pass" checked> ใช่
+                        <input type="radio" name="field_${i}" value="fail"> ไม่
+                    </div>
+                </div>`;
+                if (f.type === 'bonus') return `<div class="bg-yellow-50 p-4 border rounded-xl">
+                    <label class="block font-bold mb-2">${f.label} (บวก/ลบได้)</label>
+                    <input type="number" id="field_${i}" value="0" class="w-full p-2 border rounded">
+                </div>`;
+                if (f.type === 'time') return `<div class="bg-gray-50 p-4 border rounded-xl">
+                    <label class="block font-bold mb-2">${f.label} (${f.unit})</label>
+                    <input type="number" step="0.001" id="field_${i}" class="w-full p-2 border rounded" placeholder="0.00">
+                </div>`;
+                return `<div class="bg-gray-50 p-4 border rounded-xl">
+                    <label class="block font-bold mb-2">${f.label}</label>
+                    <input type="number" id="field_${i}" class="w-full p-2 border rounded">
+                </div>`;
+            }).join('');
+            
+            updateBoardDisplay();
+        };
+
+        window.deleteActiveTemplate = async () => {
+            const tid = document.getElementById('active-template-select').value;
+            if (!tid) return;
+            
+            if (confirm('คุณต้องการลบเท็มเพลตนี้ใช่หรือไม่? (ข้อมูลคะแนนทั้งหมดในรายการนี้จะถูกลบออกด้วย)')) {
+                // Delete related scores first
+                const qScore = query(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), where("templateId", "==", tid));
+                const scoreSnap = await getDocs(qScore);
+                const deletePromises = scoreSnap.docs.map(d => deleteDoc(d.ref));
+                await Promise.all(deletePromises);
+                
+                // Delete template
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'templates', tid));
+                alert('ลบเท็มเพลตเรียบร้อยแล้ว');
+            }
+        };
+
+        window.submitScore = async () => {
+            const tid = document.getElementById('active-template-select').value;
+            const fields = templates[tid].fields;
+            let data = { templateId: tid, timestamp: Date.now(), totalScore: 0, time: 0, retry: 0, teamName: '' };
+            
+            fields.forEach((f, i) => {
+                const el = document.getElementById(`field_${i}`);
+                if (f.type === 'team_name') data.teamName = el.value || 'ไม่ระบุชื่อ';
+                else if (f.type === 'checkbox') {
+                    const isPass = document.querySelector(`input[name="field_${i}"]:checked`).value === 'pass';
+                    data.totalScore += isPass ? f.passScore : f.failScore;
+                }
+                else if (f.type === 'bonus') data.totalScore += Number(el.value);
+                else if (f.type === 'time') {
+                    let val = Number(el.value);
+                    data.time = f.unit === 'm' ? val * 60 : val;
+                    data.displayTime = `${val}${f.unit}`;
+                }
+                else if (f.type === 'retry') data.retry = Number(el.value);
+            });
+
+            await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), data);
+            alert('บันทึกคะแนนแล้ว');
+            loadTemplateToScore();
+        };
+
+        // --- Board ---
+        function listenToScores() {
+            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'scores'), (snap) => {
+                scores = [];
+                snap.forEach(d => scores.push({ id: d.id, ...d.data() }));
+                updateBoardDisplay();
+            });
+        }
+
+        window.updateBoardDisplay = () => {
+            const tid = document.getElementById('active-template-select').value;
+            const title = document.getElementById('board-title-input').value;
+            const logo = document.getElementById('board-logo-url').value;
+            const theme = document.getElementById('board-theme-select').value;
+            
+            document.getElementById('display-board-title').textContent = title;
+            const logoImg = document.getElementById('display-logo');
+            if(logo) { logoImg.src = logo; logoImg.classList.remove('hidden'); }
+            else { logoImg.classList.add('hidden'); }
+
+            const table = document.getElementById('main-table');
+            table.className = `w-full text-left table-theme-${theme}`;
+
+            const filtered = scores.filter(s => s.templateId === tid)
+                .sort((a, b) => b.totalScore - a.totalScore || a.time - b.time || a.retry - b.retry);
+
+            const body = document.getElementById('table-body');
+            if (filtered.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" class="p-10 text-center opacity-40 italic">ไม่มีข้อมูลการแข่งขัน</td></tr>';
+                return;
+            }
+
+            body.innerHTML = filtered.map((s, idx) => `
+                <tr class="border-b transition hover:bg-slate-50">
+                    <td class="p-4 text-center font-bold text-slate-400">${idx+1}</td>
+                    <td class="p-4 font-bold text-slate-800">${s.teamName}</td>
+                    <td class="p-4 text-center text-blue-600 font-black text-xl">${s.totalScore}</td>
+                    <td class="p-4 text-center text-orange-600 font-semibold">${s.displayTime || s.time+'s'}</td>
+                    <td class="p-4 text-center text-red-600 font-semibold">${s.retry}</td>
+                    <td class="p-4 text-center btn-column">
+                        <button onclick="deleteScore('${s.id}')" class="text-red-300 hover:text-red-600 p-2">🗑️</button>
+                    </td>
+                </tr>
+            `).join('');
+        };
+
+        window.deleteScore = async (id) => {
+            if(confirm('ต้องการลบข้อมูลคะแนนของทีมนี้ใช่หรือไม่?')) {
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scores', id));
+            }
+        };
+
+        window.downloadBoard = () => {
+            document.querySelectorAll('.btn-column').forEach(el => el.classList.add('no-export'));
+            const target = document.getElementById('export-area');
+            html2canvas(target, { scale: 2, useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Ranking_${Date.now()}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+                document.querySelectorAll('.btn-column').forEach(el => el.classList.remove('no-export'));
+            });
+        };
+
+        window.applyMainTheme = () => {
+            document.body.className = document.getElementById('theme-selector').value === 'dark' ? 'theme-dark min-h-screen' : 'bg-gray-50 min-h-screen';
+        };
+
+        addBuilderItem('team_name');
+    </script>
+</body>
+</html>
